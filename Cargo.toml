@@ -3,6 +3,7 @@
 members = [
     "downloader",
     "unzipper",
+    "commander"
 ]
 
 exclude = ["target"]
