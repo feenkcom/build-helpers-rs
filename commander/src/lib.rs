@@ -45,6 +45,15 @@ pub struct CommandsToExecute {
 }
 
 impl CommandsToExecute {
+    pub fn new() -> Self {
+        Self { commands: vec![] }
+    }
+
+    pub fn add(mut self, command: CommandToExecute) -> Self {
+        self.commands.push(command);
+        self
+    }
+
     pub fn execute(&mut self) -> Result<()> {
         let mut index = 0 as usize;
         let total = self.commands.len();
