@@ -1,5 +1,5 @@
 use std::process::{Command, Output};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use std::io::Result;
 
 pub struct CommandToExecute {
@@ -64,8 +64,7 @@ impl CommandsToExecute {
                 println!("[{}/{}] Executing {:?}", index, total, command.name());
                 None
             } else {
-                let pb = ProgressBar::new_spinner();
-
+                let pb = ProgressBar::with_draw_target(!0, ProgressDrawTarget::stdout());
                 pb.enable_steady_tick(120);
                 pb.set_style(
                     ProgressStyle::default_spinner()
