@@ -1,0 +1,13 @@
+[package]
+name = "downloader"
+version = "0.1.0"
+authors = ["feenk gmbh <contact@feenk.com>"]
+edition = "2021"
+
+[dependencies]
+reqwest = "0.11"
+url = "2.2"
+futures = "0.3"
+tokio = { version = "1.0", features = [ "fs" ] }
+indicatif = "0.16"
+thiserror = "1.0"

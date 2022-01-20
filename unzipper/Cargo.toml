@@ -1,0 +1,12 @@
+[package]
+name = "unzipper"
+version = "0.1.0"
+authors = ["feenk gmbh <contact@feenk.com>"]
+edition = "2021"
+
+[dependencies]
+zip = "0.5"
+futures = "0.3"
+tokio = "1.0"
+indicatif = "0.16"
+thiserror = "1.0"
