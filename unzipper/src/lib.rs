@@ -4,7 +4,6 @@ use futures::{stream, StreamExt};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use zip::ZipArchive;
 
 pub use error::{Result, UnzipperError};
@@ -69,16 +68,16 @@ impl FilesToUnzip {
     }
 
     pub async fn unzip(self) -> Result<()> {
-        let multibar = Arc::new(MultiProgress::new());
-        let main_pb = Arc::new(
-            multibar
-                .clone()
-                .add(ProgressBar::new(self.files.len() as u64)),
-        );
+        let multibar = MultiProgress::new();
+        let all_zips_pb = multibar.add(ProgressBar::new(self.files.len() as u64));
 
-        main_pb.set_style(ProgressStyle::default_bar().template("{msg} {bar:10} {pos}/{len}"));
-        main_pb.set_message("total  ");
-        main_pb.tick();
+        all_zips_pb.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg} {bar:10} {pos}/{len}")
+                .unwrap(),
+        );
+        all_zips_pb.set_message("total  ");
+        all_zips_pb.tick();
 
         // Set up a future to iterate over tasks and run up to 2 at a time.
         let tasks = stream::iter(&self.files).enumerate().for_each_concurrent(
@@ -86,7 +85,7 @@ impl FilesToUnzip {
             |(_i, file_to_unzip)| async {
                 // Clone multibar and main_pb.  We will move the clones into each task.
                 let multibar = multibar.clone();
-                let main_pb = main_pb.clone();
+                let main_pb = all_zips_pb.clone();
                 let file_to_unzip = file_to_unzip.clone();
 
                 futures::future::lazy(|_| unzip_task(file_to_unzip.clone(), multibar))
@@ -101,13 +100,12 @@ impl FilesToUnzip {
         tasks.await;
 
         // Change the message on the overall progress indicator.
-        main_pb.finish_with_message("done");
-        multibar.join()?;
+        all_zips_pb.finish_with_message("done");
         Ok(())
     }
 }
 
-pub fn unzip_task(file_to_unzip: FileToUnzip, multibar: Arc<MultiProgress>) -> Result<()> {
+pub fn unzip_task(file_to_unzip: FileToUnzip, multibar: MultiProgress) -> Result<()> {
     let file = std::fs::File::open(&file_to_unzip.archive)?;
     let mut archive = ZipArchive::new(file)?;
 
@@ -119,6 +117,7 @@ pub fn unzip_task(file_to_unzip: FileToUnzip, multibar: Arc<MultiProgress>) -> R
     progress_bar.set_style(
         ProgressStyle::default_bar()
             .template("[{bar:40.cyan/blue}] {percent}% - {msg}")
+            .unwrap()
             .progress_chars("#>-"),
     );
 

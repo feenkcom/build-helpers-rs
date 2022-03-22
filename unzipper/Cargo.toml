@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 zip = "0.5.13"
 futures = { version = "0.3.21", default-features = false, features = [ "std" ] }
-indicatif = "0.16.2"
+indicatif = "0.17.0-rc.9"
 thiserror = "1.0.30"
 
 [dev-dependencies]
