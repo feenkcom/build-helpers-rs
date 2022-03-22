@@ -76,7 +76,7 @@ impl ToZip {
         self.archive.as_path()
     }
 
-    pub fn zip(&self) -> Result<()> {
+    pub fn zip(&self) -> Result<PathBuf> {
         let archive = std::fs::File::create(self.archive()).unwrap();
         let mut zip = zip::ZipWriter::new(archive);
 
@@ -107,7 +107,7 @@ impl ToZip {
 
         zip.finish()?;
 
-        Ok(())
+        Ok(self.archive.clone())
     }
 }
 
