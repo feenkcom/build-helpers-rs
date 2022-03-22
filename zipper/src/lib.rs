@@ -5,20 +5,76 @@ use crate::error::Result;
 use path_slash::PathExt;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 use zip::write::FileOptions;
 use zip::ZipWriter;
 
-pub fn zip_folder<F: std::io::Write + std::io::Seek>(
+#[derive(Debug, Clone)]
+pub struct ToZip {
+    archive: PathBuf,
+    what: Vec<WhatToZip>,
+}
+
+#[derive(Debug, Clone)]
+pub enum WhatToZip {
+    File(PathBuf),
+    Folder(PathBuf),
+}
+
+impl ToZip {
+    pub fn new(archive: impl Into<PathBuf>) -> Self {
+        Self {
+            archive: archive.into(),
+            what: vec![],
+        }
+    }
+
+    pub fn file(mut self, file: impl Into<PathBuf>) -> Self {
+        self.what.push(WhatToZip::File(file.into()));
+        self
+    }
+
+    pub fn folder(mut self, folder: impl Into<PathBuf>) -> Self {
+        self.what.push(WhatToZip::Folder(folder.into()));
+        self
+    }
+
+    pub fn archive(&self) -> &Path {
+        self.archive.as_path()
+    }
+
+    pub fn zip(&self) -> Result<()> {
+        let archive = std::fs::File::create(self.archive()).unwrap();
+        let mut zip = zip::ZipWriter::new(archive);
+
+        let zip_options =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+
+        for what in self.what.iter() {
+            match what {
+                WhatToZip::File(file) => {
+                    zip_file(&mut zip, file, zip_options)?;
+                }
+                WhatToZip::Folder(folder) => {
+                    zip_folder(&mut zip, folder, zip_options)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+fn zip_folder<F: std::io::Write + std::io::Seek>(
     zip: &mut ZipWriter<F>,
     src_dir: impl AsRef<Path>,
     zip_options: FileOptions,
 ) -> Result<()> {
     let src_dir = src_dir.as_ref();
 
-    let walkdir = WalkDir::new(src_dir);
-    let it = walkdir.into_iter();
+    let walk_dir = WalkDir::new(src_dir);
+    let it = walk_dir.into_iter();
 
     let mut buffer = Vec::new();
     for entry in it {
@@ -66,7 +122,7 @@ pub fn zip_folder<F: std::io::Write + std::io::Seek>(
     Ok(())
 }
 
-pub fn zip_file<F: std::io::Write + std::io::Seek>(
+fn zip_file<F: std::io::Write + std::io::Seek>(
     zip: &mut ZipWriter<F>,
     file: impl AsRef<Path>,
     mut zip_options: FileOptions,
