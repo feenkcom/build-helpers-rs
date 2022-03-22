@@ -1,6 +1,6 @@
 mod error;
 
-use crate::error::Result;
+use crate::error::{Result, UnzipperError};
 
 use path_slash::PathExt;
 use std::fs::File;
@@ -9,6 +9,9 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 use zip::write::FileOptions;
 use zip::ZipWriter;
+
+#[cfg(feature = "file-matcher")]
+use file_matcher::OneEntry;
 
 #[derive(Debug, Clone)]
 pub struct ToZip {
@@ -20,6 +23,8 @@ pub struct ToZip {
 pub enum WhatToZip {
     File(PathBuf),
     Folder(PathBuf),
+    #[cfg(feature = "file-matcher")]
+    OneEntry(OneEntry),
 }
 
 impl ToZip {
@@ -30,22 +35,33 @@ impl ToZip {
         }
     }
 
-    pub fn add_file(&mut self, file: impl Into<PathBuf>) {
-        self.what.push(WhatToZip::File(file.into()));
-    }
-
     pub fn file(mut self, file: impl Into<PathBuf>) -> Self {
         self.add_file(file);
         self
+    }
+
+    pub fn folder(mut self, folder: impl Into<PathBuf>) -> Self {
+        self.add_folder(folder);
+        self
+    }
+
+    #[cfg(feature = "file-matcher")]
+    pub fn one_entry(mut self, one_entry: OneEntry) -> Self {
+        self.add_one_entry(one_entry);
+        self
+    }
+
+    pub fn add_file(&mut self, file: impl Into<PathBuf>) {
+        self.what.push(WhatToZip::File(file.into()));
     }
 
     pub fn add_folder(&mut self, folder: impl Into<PathBuf>) {
         self.what.push(WhatToZip::Folder(folder.into()));
     }
 
-    pub fn folder(mut self, folder: impl Into<PathBuf>) -> Self {
-        self.add_folder(folder);
-        self
+    #[cfg(feature = "file-matcher")]
+    pub fn add_one_entry(&mut self, one_entry: OneEntry) {
+        self.what.push(WhatToZip::OneEntry(one_entry));
     }
 
     pub fn archive(&self) -> &Path {
@@ -66,6 +82,17 @@ impl ToZip {
                 }
                 WhatToZip::Folder(folder) => {
                     zip_folder(&mut zip, folder, zip_options)?;
+                }
+                #[cfg(feature = "file-matcher")]
+                WhatToZip::OneEntry(one_entry) => {
+                    let path = one_entry.as_path_buf()?;
+                    if path.is_file() {
+                        zip_file(&mut zip, path, zip_options)?;
+                    } else if path.is_dir() {
+                        zip_folder(&mut zip, path, zip_options)?;
+                    } else {
+                        Err(UnzipperError::UnknownEntryType(path))?
+                    }
                 }
             }
         }

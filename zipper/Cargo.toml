@@ -6,6 +6,10 @@ edition = "2021"
 
 [dependencies]
 zip = "0.5.13"
+file-matcher = { version = "0.7.0", optional = true }
 walkdir = "2.3.2"
 path-slash = "0.1.4"
 thiserror = "1.0.30"
+
+[features]
+default = [ "file-matcher" ]

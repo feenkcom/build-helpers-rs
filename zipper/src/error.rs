@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use thiserror::Error;
 use zip::result::ZipError;
 
@@ -11,6 +12,11 @@ pub enum UnzipperError {
     ZipError(#[from] ZipError),
     #[error("Walkdir error")]
     WalkdirError(#[from] walkdir::Error),
+    #[error("Unknown entry type {0}")]
+    UnknownEntryType(PathBuf),
+    #[cfg(feature = "file-matcher")]
+    #[error("File matcher error")]
+    FileMatcherError(#[from] file_matcher::FileMatcherError),
 }
 
 impl<T> From<UnzipperError> for std::result::Result<T, UnzipperError> {
