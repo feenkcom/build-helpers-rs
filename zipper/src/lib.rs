@@ -51,6 +51,14 @@ impl ToZip {
         self
     }
 
+    #[cfg(feature = "file-matcher")]
+    pub fn one_entries(mut self, entries: impl IntoIterator<Item = OneEntry>) -> Self {
+        for entry in entries.into_iter() {
+            self.add_one_entry(entry);
+        }
+        self
+    }
+
     pub fn add_file(&mut self, file: impl Into<PathBuf>) {
         self.what.push(WhatToZip::File(file.into()));
     }
