@@ -62,6 +62,8 @@ impl ToZip {
             }
         }
 
+        zip.finish()?;
+
         Ok(())
     }
 }
