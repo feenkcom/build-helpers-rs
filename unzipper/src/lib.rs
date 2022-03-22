@@ -3,9 +3,8 @@ mod error;
 use futures::{stream, StreamExt};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::task;
 use zip::ZipArchive;
 
 pub use error::{Result, UnzipperError};
@@ -23,6 +22,10 @@ impl FileToUnzip {
             output: output.into(),
         }
     }
+
+    pub fn output(&self) -> &Path {
+        self.output.as_path()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -33,6 +36,12 @@ pub struct FilesToUnzip {
 impl FilesToUnzip {
     pub fn new() -> Self {
         Self { files: vec![] }
+    }
+
+    pub fn from(files: impl IntoIterator<Item = FileToUnzip>) -> Self {
+        Self {
+            files: files.into_iter().collect::<Vec<FileToUnzip>>(),
+        }
     }
 
     pub fn add(self, file_to_unzip: FileToUnzip) -> Self {
@@ -49,6 +58,10 @@ impl FilesToUnzip {
         }
     }
 
+    pub fn add_file(self, archive: impl Into<PathBuf>, output: impl Into<PathBuf>) -> Self {
+        self.add(FileToUnzip::new(archive, output))
+    }
+
     pub fn extend(self, files_to_unzip: Self) -> Self {
         let mut files = self.files.clone();
         files.extend(files_to_unzip.files);
@@ -56,11 +69,7 @@ impl FilesToUnzip {
     }
 
     pub async fn unzip(self) -> Result<()> {
-        // Set up a new multi-progress bar.
-        // The bar is stored in an `Arc` to facilitate sharing between threads.
         let multibar = Arc::new(MultiProgress::new());
-        // Add an overall progress indicator to the multibar.
-        // It has as many steps as the download_links Vector and will increment on completion of each task.
         let main_pb = Arc::new(
             multibar
                 .clone()
@@ -69,67 +78,41 @@ impl FilesToUnzip {
 
         main_pb.set_style(ProgressStyle::default_bar().template("{msg} {bar:10} {pos}/{len}"));
         main_pb.set_message("total  ");
-
-        // Make the main progress bar render immediately rather than waiting for the
-        // first task to finish.
         main_pb.tick();
 
-        // Convert download_links Vector into stream
-        // This is basically a async compatible iterator
-        let stream = stream::iter(&self.files);
-
         // Set up a future to iterate over tasks and run up to 2 at a time.
-        let tasks = stream
-            .enumerate()
-            .for_each_concurrent(Some(2), |(_i, file_to_unzip)| {
+        let tasks = stream::iter(&self.files).enumerate().for_each_concurrent(
+            Some(2),
+            |(_i, file_to_unzip)| async {
                 // Clone multibar and main_pb.  We will move the clones into each task.
                 let multibar = multibar.clone();
                 let main_pb = main_pb.clone();
                 let file_to_unzip = file_to_unzip.clone();
-                async move {
-                    // Spawn a new tokio task for the current file to unzip
-                    // We need to hand over the multibar, so the ProgressBar for the task can be added
-                    let _task = task::spawn(futures::future::lazy(|_| {
-                        unzip_task(file_to_unzip, multibar)
-                    }))
-                    .await;
 
-                    // Increase main ProgressBar by 1
-                    main_pb.inc(1);
-                }
-            });
+                futures::future::lazy(|_| unzip_task(file_to_unzip.clone(), multibar))
+                    .await
+                    .expect(format!("Failed to unzip {:?}", &file_to_unzip).as_str());
 
-        // Set up a future to manage rendering of the multiple progress bars.
-        let multibar = {
-            // Create a clone of the multibar, which we will move into the task.
-            let multibar = multibar.clone();
-
-            // multibar.join() is *not* async and will block until all the progress
-            // bars are done, therefore we must spawn it on a separate scheduler
-            // on which blocking behavior is allowed.
-            tokio::task::spawn_blocking(move || multibar.join())
-        };
+                main_pb.inc(1);
+            },
+        );
 
         // Wait for the tasks to finish.
         tasks.await;
 
         // Change the message on the overall progress indicator.
         main_pb.finish_with_message("done");
-
-        // Wait for the progress bars to finish rendering.
-        // The first ? unwraps the outer join() in which we are waiting for the
-        // future spawned by tokio::task::spawn_blocking to finishe.
-        // The second ? unwraps the inner multibar.join().
-        Ok(multibar.await??)
+        multibar.join()?;
+        Ok(())
     }
 }
 
 pub fn unzip_task(file_to_unzip: FileToUnzip, multibar: Arc<MultiProgress>) -> Result<()> {
-    let file = std::fs::File::open(&file_to_unzip.archive).unwrap();
-    let mut archive = ZipArchive::new(file).unwrap();
+    let file = std::fs::File::open(&file_to_unzip.archive)?;
+    let mut archive = ZipArchive::new(file)?;
 
-    // Create the ProgressBar with the aquired size from before
-    // and add it to the multibar
+    // Create the ProgressBar with the acquired size from before
+    // and add it to the multi-bar
     let progress_bar = multibar.add(ProgressBar::new(archive.len() as u64));
 
     // Set Style to the ProgressBar
