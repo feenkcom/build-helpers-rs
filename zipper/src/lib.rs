@@ -30,13 +30,21 @@ impl ToZip {
         }
     }
 
-    pub fn file(mut self, file: impl Into<PathBuf>) -> Self {
+    pub fn add_file(&mut self, file: impl Into<PathBuf>) {
         self.what.push(WhatToZip::File(file.into()));
+    }
+
+    pub fn file(mut self, file: impl Into<PathBuf>) -> Self {
+        self.add_file(file);
         self
     }
 
-    pub fn folder(mut self, folder: impl Into<PathBuf>) -> Self {
+    pub fn add_folder(&mut self, folder: impl Into<PathBuf>) {
         self.what.push(WhatToZip::Folder(folder.into()));
+    }
+
+    pub fn folder(mut self, folder: impl Into<PathBuf>) -> Self {
+        self.add_folder(folder);
         self
     }
 
