@@ -2,10 +2,10 @@ use std::path::PathBuf;
 use thiserror::Error;
 use zip::result::ZipError;
 
-pub type Result<T> = core::result::Result<T, UnzipperError>;
+pub type Result<T> = core::result::Result<T, ZipperError>;
 
 #[derive(Error, Debug)]
-pub enum UnzipperError {
+pub enum ZipperError {
     #[error("Input/Output error")]
     IoError(#[from] std::io::Error),
     #[error("Zip error")]
@@ -19,8 +19,8 @@ pub enum UnzipperError {
     FileMatcherError(#[from] file_matcher::FileMatcherError),
 }
 
-impl<T> From<UnzipperError> for std::result::Result<T, UnzipperError> {
-    fn from(error: UnzipperError) -> Self {
+impl<T> From<ZipperError> for std::result::Result<T, ZipperError> {
+    fn from(error: ZipperError) -> Self {
         Err(error)
     }
 }

@@ -10,14 +10,8 @@ fn unzip() -> Result<(), Box<dyn Error>> {
     let output_dir = tempdir()?;
     let output = output_dir.path();
 
-    let cat = FileToUnzip::new(
-        tests_dir.join("archives/cat.zip"),
-        output.join("cat"),
-    );
-    let dog = FileToUnzip::new(
-        tests_dir.join("archives/dog.zip"),
-        output.join("dog"),
-    );
+    let cat = FileToUnzip::new(tests_dir.join("archives/cat.zip"), output.join("cat"));
+    let dog = FileToUnzip::new(tests_dir.join("archives/dog.zip"), output.join("dog"));
     let mice = FileToUnzip::new(tests_dir.join("archives/mice.zip"), output);
 
     let to_unzip = FilesToUnzip::from(vec![cat.clone(), dog.clone(), mice.clone()]);

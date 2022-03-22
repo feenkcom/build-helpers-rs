@@ -1,6 +1,6 @@
 mod error;
 
-use crate::error::{Result, UnzipperError};
+pub use crate::error::{Result, ZipperError};
 
 use path_slash::PathExt;
 use std::fs::File;
@@ -99,7 +99,7 @@ impl ToZip {
                     } else if path.is_dir() {
                         zip_folder(&mut zip, path, zip_options)?;
                     } else {
-                        Err(UnzipperError::UnknownEntryType(path))?
+                        Err(ZipperError::UnknownEntryType(path))?
                     }
                 }
             }
