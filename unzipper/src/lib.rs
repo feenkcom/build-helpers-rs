@@ -161,7 +161,7 @@ pub fn unzip_task(file_to_unzip: FileToUnzip, multibar: MultiProgress) -> Result
             use std::os::unix::fs::PermissionsExt;
 
             if let Some(mode) = file.unix_mode() {
-                std::fs::set_permissions(&output_path, fs::Permissions::from_mode(mode)).unwrap();
+                std::fs::set_permissions(&output_path, std::fs::Permissions::from_mode(mode)).unwrap();
             }
         }
         progress_bar.inc(1)
