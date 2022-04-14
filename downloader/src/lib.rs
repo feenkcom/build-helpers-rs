@@ -30,6 +30,10 @@ impl FileToDownload {
         }
     }
 
+    pub fn already_downloaded(&self) -> bool {
+        self.path().exists()
+    }
+
     pub fn path(&self) -> PathBuf {
         self.directory.join(&self.file_name)
     }
@@ -65,7 +69,15 @@ impl FilesToDownload {
         Self { files }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.files.is_empty()
+    }
+
     pub async fn download(self) -> Result<()> {
+        if self.is_empty() {
+            return Ok(())
+        }
+
         // Set up a new multi-progress bar.
         // The bar is stored in an `Arc` to facilitate sharing between threads.
         let multibar = Arc::new(MultiProgress::new());

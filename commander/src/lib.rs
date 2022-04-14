@@ -1,7 +1,8 @@
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use new_string_template::template::Template;
 use std::collections::HashMap;
-use std::io::Result;
+use std::ffi::OsStr;
+use std::io::{Error, ErrorKind, Result};
 use std::process::{Command, Output};
 
 pub struct CommandToExecute {
@@ -21,6 +22,12 @@ impl CommandToExecute {
             log_prefix: "[{ index }/{ total }]".to_string(),
             log_message: "Executing { name }".to_string(),
         }
+    }
+
+    pub fn new_with(command_name: impl AsRef<OsStr>, builder: impl Fn(&mut Command)) -> Self {
+        let mut command = Command::new(command_name);
+        builder(&mut command);
+        Self::new(command)
     }
 
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
@@ -52,7 +59,24 @@ impl CommandToExecute {
     }
 
     pub fn execute(&mut self) -> Result<Output> {
-        self.command.output()
+        let output = self.command.output()?;
+        println!("executed command {:?}", &self.command);
+        println!("output {:?}", &output);
+        if !output.status.success() {
+            let stderr = String::from_utf8(output.stderr).unwrap();
+
+            return Err(Error::new(
+                ErrorKind::Other,
+                format!(
+                    "Command {} didn't finish successfully (exit code = {:?}): {:?}\n{}",
+                    self.name(),
+                    output.status.code(),
+                    &self.command,
+                    stderr
+                ),
+            ));
+        }
+        Ok(output)
     }
 }
 

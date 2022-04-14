@@ -2,7 +2,6 @@ mod error;
 
 use futures::{stream, StreamExt};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use std::fs;
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 
@@ -65,6 +64,10 @@ impl FilesToUnzip {
         let mut files = self.files.clone();
         files.extend(files_to_unzip.files);
         Self { files }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.files.is_empty()
     }
 
     pub async fn unzip(self) -> Result<()> {

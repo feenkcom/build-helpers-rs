@@ -143,6 +143,7 @@ fn zip_folder<F: std::io::Write + std::io::Seek>(
         // Write file or directory explicitly
         // Some unzip tools unzip files with directory paths correctly, some do not!
         if path.is_file() {
+            #[allow(unused_mut)]
             let mut file_options = zip_options.clone();
             // Get and Set permissions
             #[cfg(unix)]
@@ -167,6 +168,7 @@ fn zip_folder<F: std::io::Write + std::io::Seek>(
     Ok(())
 }
 
+#[allow(unused_mut)]
 fn zip_file<F: std::io::Write + std::io::Seek>(
     zip: &mut ZipWriter<F>,
     file: impl AsRef<Path>,
