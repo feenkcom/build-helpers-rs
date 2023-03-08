@@ -75,7 +75,7 @@ impl FilesToDownload {
 
     pub async fn download(self) -> Result<()> {
         if self.is_empty() {
-            return Ok(())
+            return Ok(());
         }
 
         // Set up a new multi-progress bar.
@@ -184,6 +184,11 @@ pub async fn download_task(
 
     // Set the filename as message part of the progress bar
     progress_bar.set_message(file_to_download.file_name.clone());
+
+    // Make sure that the target dir exists
+    if !file_to_download.directory.exists() {
+        std::fs::create_dir_all(file_to_download.directory.as_path())?;
+    }
 
     // Create the output file with tokio's async fs lib
     let mut outfile =
