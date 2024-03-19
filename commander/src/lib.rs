@@ -64,17 +64,21 @@ impl CommandToExecute {
     }
 
     pub fn execute(&mut self) -> Result<Output> {
-        let output = self.command.output().map_err(|error| {
-            Err(Error::new(
-                ErrorKind::Other,
-                format!(
-                    "Failed to execute command `{}` due to `{}`:\n  {:?}",
-                    self.name(),
-                    error,
-                    &self.command,
-                ),
-            ))
-        })?;
+        let output = match self.command.output() {
+            Ok(output) => output,
+            Err(error) => {
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    format!(
+                        "Failed to execute command `{}` due to `{}`:\n  {:?}",
+                        self.name(),
+                        error,
+                        &self.command,
+                    ),
+                ))
+            }
+        };
+
         if !output.status.success() {
             let stderr = String::from_utf8(output.stderr).unwrap();
 
