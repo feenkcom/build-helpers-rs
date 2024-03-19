@@ -64,7 +64,17 @@ impl CommandToExecute {
     }
 
     pub fn execute(&mut self) -> Result<Output> {
-        let output = self.command.output()?;
+        let output = self.command.output().map_err(|error| {
+            Err(Error::new(
+                ErrorKind::Other,
+                format!(
+                    "Failed to execute command `{}` due to `{}`:\n  {:?}",
+                    self.name(),
+                    error,
+                    &self.command,
+                ),
+            ))
+        })?;
         if !output.status.success() {
             let stderr = String::from_utf8(output.stderr).unwrap();
 
@@ -102,7 +112,7 @@ impl CommandsToExecute {
     }
 
     pub fn execute(&mut self) -> Result<()> {
-        let mut index = 0 as usize;
+        let mut index = 0usize;
         let total = self.commands.len();
 
         for command in &mut self.commands {
