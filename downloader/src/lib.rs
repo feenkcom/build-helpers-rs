@@ -89,7 +89,11 @@ impl FilesToDownload {
                 .add(ProgressBar::new(self.files.len() as u64)),
         );
 
-        main_pb.set_style(ProgressStyle::default_bar().template("{msg} {bar:10} {pos}/{len}"));
+        main_pb.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg} {bar:10} {pos}/{len}")
+                .unwrap(),
+        );
         main_pb.set_message("total  ");
 
         // Make the main progress bar render immediately rather than waiting for the
@@ -118,28 +122,24 @@ impl FilesToDownload {
                 }
             });
 
-        // Set up a future to manage rendering of the multiple progress bars.
-        let multibar = {
-            // Create a clone of the multibar, which we will move into the task.
-            let multibar = multibar.clone();
-
-            // multibar.join() is *not* async and will block until all the progress
-            // bars are done, therefore we must spawn it on a separate scheduler
-            // on which blocking behavior is allowed.
-            task::spawn_blocking(move || multibar.join())
-        };
+        // // Set up a future to manage rendering of the multiple progress bars.
+        // let multibar = {
+        //     // Create a clone of the multibar, which we will move into the task.
+        //     let multibar = multibar.clone();
+        //
+        //     // multibar.join() is *not* async and will block until all the progress
+        //     // bars are done, therefore we must spawn it on a separate scheduler
+        //     // on which blocking behavior is allowed.
+        //     task::spawn_blocking(move || multibar.)
+        // };
 
         // Wait for the tasks to finish.
         tasks.await;
 
         // Change the message on the overall progress indicator.
         main_pb.finish_with_message("done");
-
-        // Wait for the progress bars to finish rendering.
-        // The first ? unwraps the outer join() in which we are waiting for the
-        // future spawned by tokio::task::spawn_blocking to finishe.
-        // The second ? unwraps the inner multibar.join().
-        Ok(multibar.await??)
+        multibar.clear()?;
+        Ok(())
     }
 }
 
@@ -179,6 +179,7 @@ pub async fn download_task(
     progress_bar.set_style(
         ProgressStyle::default_bar()
             .template("[{bar:40.cyan/blue}] {bytes}/{total_bytes} - {msg}")
+            .unwrap()
             .progress_chars("#>-"),
     );
 
