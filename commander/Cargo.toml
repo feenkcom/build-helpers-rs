@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-indicatif = "0.16"
+indicatif = "0.18"
 new_string_template = "1.0"
