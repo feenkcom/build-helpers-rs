@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
-use zip::write::FileOptions;
+use zip::write::{FileOptionExtension, FileOptions, SimpleFileOptions};
 use zip::ZipWriter;
 
 #[cfg(feature = "file-matcher")]
@@ -77,11 +77,11 @@ impl ToZip {
     }
 
     pub fn zip(&self) -> Result<PathBuf> {
-        let archive = std::fs::File::create(self.archive()).unwrap();
-        let mut zip = zip::ZipWriter::new(archive);
+        let archive = File::create(self.archive()).unwrap();
+        let mut zip = ZipWriter::new(archive);
 
         let zip_options =
-            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
         for what in self.what.iter() {
             match what {
@@ -111,12 +111,15 @@ impl ToZip {
     }
 }
 
-fn zip_folder<F: std::io::Write + std::io::Seek>(
+fn zip_folder<F: Write + std::io::Seek, T: FileOptionExtension + Clone>(
     zip: &mut ZipWriter<F>,
     src_dir: impl AsRef<Path>,
-    zip_options: FileOptions,
+    zip_options: FileOptions<T>,
 ) -> Result<()> {
     let src_dir = src_dir.as_ref();
+    if !src_dir.exists() {
+        return Err(ZipperError::FolderDoesNotExist(src_dir.to_owned()));
+    }
 
     let walk_dir = WalkDir::new(src_dir);
     let it = walk_dir.into_iter();
@@ -135,9 +138,9 @@ fn zip_folder<F: std::io::Write + std::io::Seek>(
 
         // zip requires that folder separator is /, even on windows
         let name = if cfg!(windows) {
-            Path::new(name).to_slash().unwrap_or(name.to_owned())
+            Path::new(name).to_slash().unwrap_or(name.into())
         } else {
-            name.to_owned()
+            name.into()
         };
 
         // Write file or directory explicitly
@@ -161,7 +164,7 @@ fn zip_folder<F: std::io::Write + std::io::Seek>(
             zip.write_all(&*buffer)?;
             buffer.clear();
         } else if name.len() != 0 {
-            zip.add_directory(name, zip_options)?;
+            zip.add_directory(name, zip_options.clone())?;
         }
     }
 
@@ -169,12 +172,17 @@ fn zip_folder<F: std::io::Write + std::io::Seek>(
 }
 
 #[allow(unused_mut)]
-fn zip_file<F: std::io::Write + std::io::Seek>(
+fn zip_file<F: Write + std::io::Seek, T: FileOptionExtension>(
     zip: &mut ZipWriter<F>,
     file: impl AsRef<Path>,
-    mut zip_options: FileOptions,
+    mut zip_options: FileOptions<T>,
 ) -> Result<()> {
     let file = file.as_ref();
+
+    if !file.exists() {
+        return Err(ZipperError::FileDoesNotExist(file.to_owned()));
+    }
+
     let name = file
         .file_name()
         .expect("Could not get file name")

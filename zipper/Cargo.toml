@@ -5,11 +5,11 @@ authors = ["feenk gmbh <contact@feenk.com>"]
 edition = "2021"
 
 [dependencies]
-zip = "0.5.13"
+zip = "4.3"
 file-matcher = { version = "0.7.0", optional = true }
-walkdir = "2.3.2"
-path-slash = "0.1.4"
-thiserror = "1.0.30"
+walkdir = "2.5"
+path-slash = "0.2"
+thiserror = "1.0"
 
 [features]
 default = [ "file-matcher" ]

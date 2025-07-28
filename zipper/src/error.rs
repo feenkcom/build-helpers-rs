@@ -6,6 +6,10 @@ pub type Result<T> = core::result::Result<T, ZipperError>;
 
 #[derive(Error, Debug)]
 pub enum ZipperError {
+    #[error("File to zip doesn't exist: {0}")]
+    FileDoesNotExist(PathBuf),
+    #[error("Folder to zip doesn't exist: {0}")]
+    FolderDoesNotExist(PathBuf),
     #[error("Input/Output error")]
     IoError(#[from] std::io::Error),
     #[error("Zip error")]
