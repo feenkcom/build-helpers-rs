@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::io::{Error, ErrorKind, Result, Write};
 use std::process::{Command, Output};
+use std::time::Duration;
 
 pub struct CommandToExecute {
     name: String,
@@ -136,17 +137,18 @@ impl CommandsToExecute {
             let pb = if command.is_verbose() {
                 None
             } else {
-                let pb = ProgressBar::with_draw_target(!0, ProgressDrawTarget::stderr());
+                let pb = ProgressBar::with_draw_target(None, ProgressDrawTarget::stderr());
                 if pb.is_hidden() {
                     None
                 } else {
-                    pb.enable_steady_tick(120);
+                    pb.enable_steady_tick(Duration::from_millis(120));
                     pb.set_style(
                         ProgressStyle::default_spinner()
                             .tick_strings(&[
                                 "🌑 ", "🌒 ", "🌓 ", "🌔 ", "🌕 ", "🌖 ", "🌗 ", "🌘 ", "✅ ",
                             ])
-                            .template("{prefix:.bold.dim} {spinner:.blue} {wide_msg}"),
+                            .template("{prefix:.bold.dim} {spinner:.blue} {wide_msg}")
+                            .unwrap(),
                     );
                     pb.set_message(format!("{}", &message));
                     pb.set_prefix(format!("{}", &prefix));
@@ -156,7 +158,7 @@ impl CommandsToExecute {
 
             if pb.is_none() {
                 print!("{} {}...", prefix, command.name());
-                std::io::stdout().flush().unwrap();
+                std::io::stdout().flush()?;
             }
 
             command.execute()?;
